@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kpforu
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  api:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/kpforu
+      JWT_SECRET_KEY: dev-secret
+      DASHSCOPE_API_KEY: sk-107de5e29e0c4436b82afdf0d82c315c
+      QWEN_MODEL: ${QWEN_MODEL:-qwen3-omni-flash}
+      QWEN_AUDIO_VOICE: ${QWEN_AUDIO_VOICE:-Cherry}
+      QWEN_AUDIO_FORMAT: ${QWEN_AUDIO_FORMAT:-wav}
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+volumes:
+  db_data:

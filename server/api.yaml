@@ -1,0 +1,1309 @@
+openapi: 3.1.0
+info:
+  title: KpForU API (MVP)
+  version: "1.0.0"
+  description: |
+    KpForU 云端 API：手机 + 手表 + 云端协同学习系统。
+
+    鉴权：
+    - 仅使用 access_token（Bearer JWT），不提供 refresh_token。
+    - 绑定码仅用于配对，不作为长期凭证。
+
+    复习算法：
+    - 使用 Leitner 档位制（boxes 1..5）。
+    - done：卡片 box 上升 1（最大 5），并根据 box 设定 next_review_at。
+    - snooze：不改变 box，仅将 next_review_at 顺延 snooze_days（1/2/3 天固定选项）。
+
+servers:
+  - url: http://127.0.0.1:8000/v1
+    description: Local
+  - url: https://api.kpforu.com/v1
+    description: Production (example)
+
+tags:
+  - name: Binding
+  - name: Auth
+  - name: TimeFlow
+  - name: Focus
+  - name: Cards
+  - name: Reviews
+  - name: Watch
+  - name: Voice
+  - name: AI
+
+security:
+  - bearerAuth: []
+
+paths:
+  /devices/watch/register:
+    post:
+      tags: [Binding]
+      summary: Watch register bind code (idempotent)
+      description: |
+        手表首次启动生成随机绑定码并注册到云端。建议以 device_id 做幂等。
+        该接口不需要鉴权。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchRegisterRequest"
+            examples:
+              example:
+                value:
+                  device_id: "4a3b39e1-9d7a-4c0a-9f5e-7e0a8f0c3c11"
+                  bind_code: "8K3Q-1Z9A"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchRegisterResponse"
+              examples:
+                example:
+                  value:
+                    watch_device_id: "4a3b39e1-9d7a-4c0a-9f5e-7e0a8f0c3c11"
+                    bind_code: "8K3Q-1Z9A"
+                    registered: true
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /binding/pair:
+    post:
+      tags: [Binding]
+      summary: Pair phone with watch by bind code
+      description: |
+        手机端输入绑定码完成配对。服务端可创建 user，并将 phone/watch 绑定到 user。
+        该接口不需要鉴权（MVP）。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PairRequest"
+            examples:
+              example:
+                value:
+                  phone_device_id: "b0a7f3f1-98e3-45c1-9d2a-1e5c1b6ccf8e"
+                  bind_code: "8K3Q-1Z9A"
+      responses:
+        "200":
+          description: Paired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PairResponse"
+              examples:
+                example:
+                  value:
+                    user_id: "2ad2f2f1-4cb6-4d1f-9f8a-4d5d63f8db6c"
+                    phone_device_id: "b0a7f3f1-98e3-45c1-9d2a-1e5c1b6ccf8e"
+                    watch_device_id: "4a3b39e1-9d7a-4c0a-9f5e-7e0a8f0c3c11"
+                    paired: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/token:
+    post:
+      tags: [Auth]
+      summary: Issue access token for a device (MVP)
+      description: |
+        MVP 简化：设备在已绑定前提下，凭 device_id + device_type 换取 access_token。
+        生产环境建议加一次性 pairing proof、设备签名或其他校验；MVP 可省略。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+            examples:
+              phone:
+                value:
+                  device_id: "b0a7f3f1-98e3-45c1-9d2a-1e5c1b6ccf8e"
+                  device_type: "phone"
+              watch:
+                value:
+                  device_id: "4a3b39e1-9d7a-4c0a-9f5e-7e0a8f0c3c11"
+                  device_type: "watch"
+      responses:
+        "200":
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+              examples:
+                example:
+                  value:
+                    access_token: "eyJhbGciOi...snip"
+                    token_type: "Bearer"
+                    expires_in: 86400
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /timeflows/templates:
+    post:
+      tags: [TimeFlow]
+      summary: Create time flow template (phone)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeFlowTemplateCreate"
+            examples:
+              example:
+                value:
+                  name: "25/5 x4"
+                  phases:
+                    - type: "study"
+                      duration_sec: 1500
+                      vibrate_interval_sec: 300
+                    - type: "break"
+                      duration_sec: 300
+                    - type: "long_break"
+                      duration_sec: 900
+                  loop:
+                    mode: "cycles"
+                    cycles: 4
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeFlowTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    get:
+      tags: [TimeFlow]
+      summary: List time flow templates
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedTimeFlowTemplates"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /timeflows/templates/{template_id}:
+    put:
+      tags: [TimeFlow]
+      summary: Update time flow template
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeFlowTemplateCreate"
+            examples:
+              example:
+                value:
+                  name: "25/5 x4 (no vibrate)"
+                  phases:
+                    - type: "study"
+                      duration_sec: 1500
+                    - type: "break"
+                      duration_sec: 300
+                    - type: "long_break"
+                      duration_sec: 900
+                  loop:
+                    mode: "cycles"
+                    cycles: 4
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeFlowTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [TimeFlow]
+      summary: Delete time flow template
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /focus/sessions:
+    post:
+      tags: [Focus]
+      summary: Upload focus session (watch)
+      description: |
+        手表在一次时间流结束时上传专注记录。支持 client_generated_id 幂等。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FocusSessionCreate"
+            examples:
+              example:
+                value:
+                  client_generated_id: "watch-20260123-000001"
+                  template_snapshot:
+                    name: "25/5 x4"
+                    phases:
+                      - type: "study"
+                        duration_sec: 1500
+                        vibrate_interval_sec: 300
+                      - type: "break"
+                        duration_sec: 300
+                    loop:
+                      mode: "until_time"
+                      until_time: "2026-01-23T22:30:00+08:00"
+                  started_at: "2026-01-23T21:00:00+08:00"
+                  ended_at: "2026-01-23T21:32:10+08:00"
+                  ended_reason: "user_ended"
+                  ended_phase_index: 0
+                  manual_confirm_required: false
+                  saved_confirmed: true
+      responses:
+        "201":
+          description: Created (or idempotent existing)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FocusSessionCreateResponse"
+              examples:
+                example:
+                  value:
+                    session_id: "b7c4a2d1-2c37-4c8d-9b93-6d5f0c6e3f12"
+                    created: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    get:
+      tags: [Focus]
+      summary: List focus sessions (phone)
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Start date (YYYY-MM-DD)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: End date (YYYY-MM-DD)
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedFocusSessions"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /cards:
+    post:
+      tags: [Cards]
+      summary: Create card (phone)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CardCreate"
+            examples:
+              example:
+                value:
+                  front: "什么是 SM-2？"
+                  back: "一种间隔重复算法，用于计算下次复习间隔。"
+                  tags: ["算法", "记忆"]
+                  status: "active"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /cards/{card_id}:
+    put:
+      tags: [Cards]
+      summary: Update card (phone)
+      parameters:
+        - $ref: "#/components/parameters/CardId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CardUpdate"
+            examples:
+              example:
+                value:
+                  front: "什么是 SM-2 算法？"
+                  back: "SuperMemo 的间隔重复算法之一。"
+                  tags: ["算法", "复习"]
+                  status: "active"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /reviews/due:
+    get:
+      tags: [Reviews]
+      summary: Get due cards list (phone)
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Local date (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Due list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DueListResponse"
+              examples:
+                example:
+                  value:
+                    date: "2026-01-23"
+                    due_count: 12
+                    data:
+                      - card:
+                          card_id: "7f0a1c3b-7e1b-4c6a-9df1-4a4b5c2e2f18"
+                          front: "什么是 SM-2？"
+                          back: "一种间隔重复算法，用于计算下次复习间隔。"
+                          tags: ["算法", "记忆"]
+                          status: "active"
+                          created_at: "2026-01-23T06:10:00Z"
+                          updated_at: "2026-01-23T06:10:00Z"
+                        schedule:
+                          card_id: "7f0a1c3b-7e1b-4c6a-9df1-4a4b5c2e2f18"
+                          box: 2
+                          next_review_at: "2026-01-23T12:00:00+08:00"
+                          interval_days: 1
+                          due_state: "due"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /watch/review/metrics:
+    get:
+      tags: [Watch]
+      summary: Watch review metrics (today planned/done + next review time)
+      responses:
+        "200":
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchReviewMetrics"
+              examples:
+                example:
+                  value:
+                    today:
+                      date: "2026-01-23"
+                      planned: 12
+                      done: 5
+                    next_review_at: "2026-01-23T15:30:00+08:00"
+                    countdown_sec: 5400
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /reviews/events:
+    post:
+      tags: [Reviews]
+      summary: Submit review event (watch/phone)
+      description: |
+        复习事件：
+        - done：box +1 (max 5)，按 Leitner 规则重新计算 next_review_at
+        - snooze：box 不变，next_review_at += snooze_days（固定 1/2/3）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewEventCreate"
+            examples:
+              done:
+                value:
+                  card_id: "7f0a1c3b-7e1b-4c6a-9df1-4a4b5c2e2f18"
+                  event_type: "done"
+                  occurred_at: "2026-01-23T14:00:00+08:00"
+                  source: "watch"
+              snooze:
+                value:
+                  card_id: "7f0a1c3b-7e1b-4c6a-9df1-4a4b5c2e2f18"
+                  event_type: "snooze"
+                  snooze_days: 2
+                  occurred_at: "2026-01-23T14:00:00+08:00"
+                  source: "watch"
+      responses:
+        "201":
+          description: Event accepted and schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewEventResponse"
+              examples:
+                example:
+                  value:
+                    event_id: "c2a9d4a0-2d6c-4aa0-9d8d-9e2e2f0b3a44"
+                    card_id: "7f0a1c3b-7e1b-4c6a-9df1-4a4b5c2e2f18"
+                    box: 3
+                    next_review_at: "2026-01-25T09:00:00+08:00"
+                    interval_days: 2
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /voice/drafts:
+    post:
+      tags: [Voice]
+      summary: Upload voice recording to create transcription draft (watch)
+      description: |
+        手表端上传音频文件（multipart/form-data）。
+        服务端异步转写，返回 draft_id 与 processing 状态。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/VoiceDraftUploadRequest"
+            encoding:
+              audio:
+                contentType: audio/mpeg, audio/wav, audio/mp4, audio/x-m4a
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceDraftCreateResponse"
+              examples:
+                example:
+                  value:
+                    draft_id: "a9b1d2c3-4e5f-6789-aaaa-bbbbccccdddd"
+                    status: "processing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+
+  /voice/drafts/{draft_id}:
+    get:
+      tags: [Voice]
+      summary: Get voice draft status/result
+      parameters:
+        - $ref: "#/components/parameters/DraftId"
+      responses:
+        "200":
+          description: Draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceDraft"
+              examples:
+                done:
+                  value:
+                    draft_id: "a9b1d2c3-4e5f-6789-aaaa-bbbbccccdddd"
+                    audio_format: "mp3"
+                    status: "done"
+                    transcript_text: "记录：今天要复习二分查找的边界条件。"
+                    generated_card_id: "0d5f3c2b-1111-2222-3333-444455556666"
+                    created_at: "2026-01-23T05:30:00Z"
+                    updated_at: "2026-01-23T05:31:10Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /ai/summaries/daily:
+    post:
+      tags: [AI]
+      summary: Generate or get daily AI summary (phone)
+      description: |
+        仅做总结与建议，不参与复习计划计算。
+        幂等：同一天可返回已生成的 summary。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIDailySummaryRequest"
+            examples:
+              example:
+                value:
+                  date: "2026-01-23"
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AISummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /ai/summaries/weekly:
+    post:
+      tags: [AI]
+      summary: Generate or get weekly AI summary (phone)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIWeeklySummaryRequest"
+            examples:
+              example:
+                value:
+                  week_start: "2026-01-19"
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AISummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        nullable: true
+
+    TemplateId:
+      name: template_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    CardId:
+      name: card_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    DraftId:
+      name: draft_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Unauthorized (missing/invalid token)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            example:
+              value:
+                error:
+                  code: "unauthorized"
+                  message: "Invalid or missing access token"
+                  details: {}
+    Forbidden:
+      description: Forbidden (not paired / no permission)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            example:
+              value:
+                error:
+                  code: "forbidden"
+                  message: "Device is not paired"
+                  details: {}
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            example:
+              value:
+                error:
+                  code: "not_found"
+                  message: "Resource not found"
+                  details: {}
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            example:
+              value:
+                error:
+                  code: "conflict"
+                  message: "Resource already exists or cannot be paired"
+                  details: {}
+    UnprocessableEntity:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            example:
+              value:
+                error:
+                  code: "validation_error"
+                  message: "Invalid request payload"
+                  details:
+                    field: "phases"
+    PayloadTooLarge:
+      description: Payload too large
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            example:
+              value:
+                error:
+                  code: "payload_too_large"
+                  message: "Audio file too large"
+                  details: {}
+    UnsupportedMediaType:
+      description: Unsupported media type
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+          examples:
+            example:
+              value:
+                error:
+                  code: "unsupported_media_type"
+                  message: "Unsupported audio format"
+                  details: {}
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              examples: ["invalid_request"]
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+    DeviceType:
+      type: string
+      enum: ["phone", "watch"]
+
+    WatchRegisterRequest:
+      type: object
+      required: [device_id, bind_code]
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        bind_code:
+          type: string
+          description: Long-lived pairing code generated by watch
+          minLength: 4
+          maxLength: 32
+
+    WatchRegisterResponse:
+      type: object
+      required: [watch_device_id, bind_code, registered]
+      properties:
+        watch_device_id:
+          type: string
+          format: uuid
+        bind_code:
+          type: string
+        registered:
+          type: boolean
+
+    PairRequest:
+      type: object
+      required: [phone_device_id, bind_code]
+      properties:
+        phone_device_id:
+          type: string
+          format: uuid
+        bind_code:
+          type: string
+
+    PairResponse:
+      type: object
+      required: [user_id, phone_device_id, watch_device_id, paired]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        phone_device_id:
+          type: string
+          format: uuid
+        watch_device_id:
+          type: string
+          format: uuid
+        paired:
+          type: boolean
+
+    TokenRequest:
+      type: object
+      required: [device_id, device_type]
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        device_type:
+          $ref: "#/components/schemas/DeviceType"
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          const: "Bearer"
+        expires_in:
+          type: integer
+          description: Seconds until expiry
+
+    PhaseType:
+      type: string
+      enum: ["study", "break", "long_break"]
+
+    Phase:
+      type: object
+      required: [type, duration_sec]
+      properties:
+        type:
+          $ref: "#/components/schemas/PhaseType"
+        duration_sec:
+          type: integer
+          minimum: 30
+        vibrate_interval_sec:
+          type: integer
+          nullable: true
+          description: Only meaningful for study phase; omit or null to disable
+          minimum: 30
+
+    LoopSetting:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: ["cycles", "until_time"]
+        cycles:
+          type: integer
+          minimum: 1
+          nullable: true
+        until_time:
+          type: string
+          format: date-time
+          nullable: true
+      allOf:
+        - if:
+            properties:
+              mode: { const: "cycles" }
+          then:
+            required: [cycles]
+        - if:
+            properties:
+              mode: { const: "until_time" }
+          then:
+            required: [until_time]
+
+    TimeFlowTemplateCreate:
+      type: object
+      required: [name, phases, loop]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        phases:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Phase"
+        loop:
+          $ref: "#/components/schemas/LoopSetting"
+
+    TimeFlowTemplate:
+      allOf:
+        - $ref: "#/components/schemas/TimeFlowTemplateCreate"
+        - type: object
+          required: [template_id, created_at, updated_at]
+          properties:
+            template_id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+
+    PaginatedTimeFlowTemplates:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeFlowTemplate"
+        next_cursor:
+          type: string
+          nullable: true
+
+    TimeFlowTemplateSnapshot:
+      type: object
+      required: [name, phases, loop]
+      properties:
+        name:
+          type: string
+        phases:
+          type: array
+          items:
+            $ref: "#/components/schemas/Phase"
+        loop:
+          $ref: "#/components/schemas/LoopSetting"
+
+    FocusEndedReason:
+      type: string
+      enum: ["natural", "user_ended"]
+
+    FocusSessionCreate:
+      type: object
+      required:
+        - template_snapshot
+        - started_at
+        - ended_at
+        - ended_reason
+        - ended_phase_index
+        - manual_confirm_required
+        - saved_confirmed
+      properties:
+        client_generated_id:
+          type: string
+          nullable: true
+          description: Client-side unique id for idempotency
+          maxLength: 128
+        template_snapshot:
+          $ref: "#/components/schemas/TimeFlowTemplateSnapshot"
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        ended_reason:
+          $ref: "#/components/schemas/FocusEndedReason"
+        ended_phase_index:
+          type: integer
+          minimum: 0
+        manual_confirm_required:
+          type: boolean
+        saved_confirmed:
+          type: boolean
+
+    FocusSessionCreateResponse:
+      type: object
+      required: [session_id, created]
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        created:
+          type: boolean
+
+    FocusSession:
+      allOf:
+        - $ref: "#/components/schemas/FocusSessionCreate"
+        - type: object
+          required: [session_id]
+          properties:
+            session_id:
+              type: string
+              format: uuid
+
+    PaginatedFocusSessions:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FocusSession"
+        next_cursor:
+          type: string
+          nullable: true
+
+    CardStatus:
+      type: string
+      enum: ["active", "archived", "draft"]
+
+    CardCreate:
+      type: object
+      required: [front, back, tags, status]
+      properties:
+        front:
+          type: string
+          minLength: 1
+        back:
+          type: string
+          minLength: 1
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 32
+        status:
+          $ref: "#/components/schemas/CardStatus"
+
+    CardUpdate:
+      type: object
+      required: [front, back, tags, status]
+      properties:
+        front:
+          type: string
+        back:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: "#/components/schemas/CardStatus"
+
+    Card:
+      allOf:
+        - $ref: "#/components/schemas/CardCreate"
+        - type: object
+          required: [card_id, created_at, updated_at]
+          properties:
+            card_id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+
+    DueState:
+      type: string
+      enum: ["due", "not_due"]
+
+    ReviewSchedule:
+      type: object
+      required: [card_id, box, next_review_at, interval_days, due_state]
+      properties:
+        card_id:
+          type: string
+          format: uuid
+        box:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Leitner box number
+        next_review_at:
+          type: string
+          format: date-time
+        interval_days:
+          type: integer
+          minimum: 0
+          description: Computed interval in days for the next review
+        due_state:
+          $ref: "#/components/schemas/DueState"
+
+    DueListItem:
+      type: object
+      required: [card, schedule]
+      properties:
+        card:
+          $ref: "#/components/schemas/Card"
+        schedule:
+          $ref: "#/components/schemas/ReviewSchedule"
+
+    DueListResponse:
+      type: object
+      required: [date, due_count, data]
+      properties:
+        date:
+          type: string
+          format: date
+        due_count:
+          type: integer
+          minimum: 0
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DueListItem"
+
+    WatchReviewMetrics:
+      type: object
+      required: [today, next_review_at, countdown_sec]
+      properties:
+        today:
+          type: object
+          required: [date, planned, done]
+          properties:
+            date:
+              type: string
+              format: date
+            planned:
+              type: integer
+              minimum: 0
+            done:
+              type: integer
+              minimum: 0
+        next_review_at:
+          type: string
+          format: date-time
+          nullable: true
+        countdown_sec:
+          type: integer
+          minimum: 0
+          nullable: true
+
+    ReviewEventType:
+      type: string
+      enum: ["done", "snooze"]
+
+    ReviewEventSource:
+      type: string
+      enum: ["watch", "phone"]
+
+    ReviewEventCreate:
+      type: object
+      required: [card_id, event_type, occurred_at, source]
+      properties:
+        card_id:
+          type: string
+          format: uuid
+        event_type:
+          $ref: "#/components/schemas/ReviewEventType"
+        snooze_days:
+          type: integer
+          enum: [1, 2, 3]
+          nullable: true
+        occurred_at:
+          type: string
+          format: date-time
+        source:
+          $ref: "#/components/schemas/ReviewEventSource"
+      allOf:
+        - if:
+            properties:
+              event_type: { const: "snooze" }
+          then:
+            required: [snooze_days]
+
+    ReviewEventResponse:
+      type: object
+      required: [event_id, card_id, box, next_review_at, interval_days]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        card_id:
+          type: string
+          format: uuid
+        box:
+          type: integer
+          minimum: 1
+          maximum: 5
+        next_review_at:
+          type: string
+          format: date-time
+        interval_days:
+          type: integer
+          minimum: 0
+
+    VoiceDraftStatus:
+      type: string
+      enum: ["processing", "done", "failed"]
+
+    VoiceDraftUploadRequest:
+      type: object
+      required: [audio]
+      properties:
+        audio:
+          type: string
+          format: binary
+        device_recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+        language:
+          type: string
+          nullable: true
+          examples: ["zh-CN"]
+        create_card_draft:
+          type: boolean
+          default: true
+
+    VoiceDraftCreateResponse:
+      type: object
+      required: [draft_id, status]
+      properties:
+        draft_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/VoiceDraftStatus"
+
+    VoiceDraft:
+      type: object
+      required: [draft_id, audio_format, status, created_at, updated_at]
+      properties:
+        draft_id:
+          type: string
+          format: uuid
+        audio_format:
+          type: string
+          enum: ["mp3", "wav", "m4a"]
+        status:
+          $ref: "#/components/schemas/VoiceDraftStatus"
+        transcript_text:
+          type: string
+          nullable: true
+        generated_card_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AIDailySummaryRequest:
+      type: object
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date
+
+    AIWeeklySummaryRequest:
+      type: object
+      required: [week_start]
+      properties:
+        week_start:
+          type: string
+          format: date
+          description: Monday date (recommended)
+
+    AISummary:
+      type: object
+      required: [summary_id, range, range_start, range_end, text, suggestions, created_at]
+      properties:
+        summary_id:
+          type: string
+          format: uuid
+        range:
+          type: string
+          enum: ["daily", "weekly"]
+        range_start:
+          type: string
+          description: For daily: YYYY-MM-DD; for weekly: YYYY-MM-DD
+        range_end:
+          type: string
+          description: For daily: YYYY-MM-DD; for weekly: YYYY-MM-DD
+        text:
+          type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
