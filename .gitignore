@@ -1,0 +1,221 @@
+# ============================================
+# 1. 全局忽略（所有目录通用）
+# ============================================
+
+# IDE & 编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# 操作系统
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ============================================
+# 2. Flutter/Dart 相关（client/ 目录）
+# ============================================
+
+# 构建输出
+**/build/
+**/ios/Flutter/.last_build_id
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework/
+**/ios/Flutter/Flutter.podspec
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# Android
+**/android/.gradle/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/key.properties
+**/android/*.jks
+**/android/*.keystore
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# iOS/XCode
+**/ios/*.mode1v3
+**/ios/*.mode2v3
+**/ios/*.moved-aside
+**/ios/*.pbxuser
+**/ios/*.perspectivev3
+**/ios/**/*sync/
+**/ios/.sconsign.dblite
+**/ios/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
+**/ios/.generated/
+**/ios/Flutter/App.framework/
+**/ios/Flutter/Engine/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+
+# macOS
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/ephemeral/
+
+# Windows
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugins.cmake
+**/windows/flutter/ephemeral/
+**/windows/*.sln
+**/windows/*.vcxproj
+**/windows/*.vcxproj.filters
+
+# Linux
+**/linux/flutter/generated_plugin_registrant.cc
+**/linux/flutter/generated_plugin_registrant.h
+**/linux/flutter/generated_plugins.cmake
+**/linux/flutter/ephemeral/
+
+# Web
+**/web/flutter_bootstrap.js
+
+# Dart/Flutter 特定
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+# **/pubspec.lock  # 库项目忽略，应用项目建议保留（你的是应用，可注释掉）
+coverage/
+lib/generated_plugin_registrant.dart
+
+# 符号文件
+app.*.symbols
+app.*.map.json
+
+# ============================================
+# 3. Python 后端相关（server/ 目录）
+# ============================================
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
+.env/
+.venv
+
+# 分发/打包
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# 测试
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# 环境变量（包含敏感信息）
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example  # 保留示例文件
+
+# 数据库
+*.sqlite
+*.sqlite3
+*.db
+
+# Alembic 迁移缓存（保留文件，忽略缓存）
+**/alembic/__pycache__/
+
+# ============================================
+# 4. Docker 相关
+# ============================================
+
+# 数据卷（如果有）
+**/data/
+**/logs/
+
+# ============================================
+# 5. 项目特定（根据你的结构）
+# ============================================
+
+# 文档生成（如果有）
+*.pdf
+*.docx
+
+# 临时文件
+*.tmp
+*.temp
+*.log
+logs/
+
+# 上传/存储文件（用户生成内容）
+server/storage/voice/*
+!server/storage/voice/.gitkeep  # 保留空目录
+
+# 证书和密钥
+*.pem
+*.key
+*.crt
+*.p12
+
+# ============================================
+# 6. 可选：根据团队约定
+# ============================================
+
+# 如果你希望锁定依赖版本，注释掉下面这行
+# **/pubspec.lock
+
+# 如果你使用 melos 管理 monorepo
+.melos_tool/
+pubspec_overrides.yaml
