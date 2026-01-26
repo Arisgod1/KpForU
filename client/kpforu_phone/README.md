@@ -25,13 +25,13 @@
 | 设备绑定/鉴权 | 获取 Token | `POST /auth/token`（绑定后） | 已实现 | Token 持久化 shared_preferences |
 | 绑定配对 | 输入绑定码完成配对 | `POST /binding/pair` | 已实现 | 需提前完成手表 `watch/register` |
 | 时间流模板 | 列表/新增/删除 | `GET/POST/DELETE /timeflows/templates` | 已实现 | 更新/分页待补充 |
-| 专注记录 | 上传结束记录 | `POST /focus/sessions` | 未实现 | 手表端主用，手机端可做历史查询 |
+| 专注记录 | 上传结束记录 | `POST /focus/sessions` | 已实现 | 手表端主用，手机端可做历史查询 |
 | 复习待办 | 获取到期卡片 | `GET /reviews/due` | 已实现 | 传 `date=YYYY-MM-DD` |
 | 复习事件 | done/snooze 提交 | `POST /reviews/events` | 已实现 | 复习页按钮已调用 |
-| 卡片管理 | 创建/更新/列表 | `POST /cards`，`PUT /cards/{id}` | 未实现 | 手机端卡片编辑后续迭代 |
-| 手表指标 | 今日计划/已完成 | `GET /watch/review/metrics` | 未实现 | 可在概览页显示 |
+| 卡片管理 | 创建/更新/列表 | `POST /cards`，`PUT /cards/{id}` | 已实现 | 手机端卡片编辑后续迭代 |
+| 手表指标 | 今日计划/已完成 | `GET /watch/review/metrics` | 已实现 | 可在概览页显示 |
 | 语音草稿 | 上传录音/查询结果 | `POST /voice/drafts`，`GET /voice/drafts/{id}` | 已实现 | 通过文件选择器上传 multipart 并轮询 |
-| AI 总结 | 每日/每周总结 | `POST /ai/summaries/daily`，`POST /ai/summaries/weekly` | 未实现 | 概览页留有占位 |
+| AI 总结 | 每日/每周总结 | `POST /ai/summaries/daily`，`POST /ai/summaries/weekly` | 已实现 | 概览页留有占位 |
 
 ## 下一步对接建议
 1) 覆盖剩余接口：卡片 CRUD、手表指标、AI 总结、专注记录列表。
