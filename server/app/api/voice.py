@@ -25,6 +25,7 @@ async def upload_voice_draft(
 ):
     user, _ = principal
     settings = get_settings()
+    os.makedirs(settings.upload_dir, exist_ok=True)
 
     max_bytes = settings.upload_max_mb * 1024 * 1024
     saved_path = os.path.join(settings.upload_dir, file.filename or "voice")

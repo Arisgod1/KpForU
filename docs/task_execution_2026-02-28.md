@@ -169,3 +169,21 @@
 ### 本轮补充（BAT 入口）
 - 新增：`server/scripts/start_backend.bat`
 - 用法：`server\scripts\start_backend.bat -UseSqlite -BindHost 127.0.0.1 -Port 8010`
+
+## 七、CI 故障修复（2026-02-28）
+### 问题现象
+1. 后端 CI 失败：`/v1/voice/drafts` 上传时报 `FileNotFoundError: storage/voice/sample.wav`。
+2. 手机端 CI 失败：`flutter analyze` 报 `asset_does_not_exist`（`lib/src/asserts/background.jpg`）。
+
+### 修复措施
+1. 后端修复（根因修复）
+  - 文件：`server/app/api/voice.py`
+  - 变更：在写入上传文件前执行 `os.makedirs(settings.upload_dir, exist_ok=True)`，确保目录存在。
+
+2. 前端修复（资源补全）
+  - 文件：`client/kpforu_phone/lib/src/asserts/background.jpg`
+  - 变更：补齐并纳入版本管理，确保 CI 环境可找到声明的资源文件。
+
+### 验证结果
+- 后端：`C:/Users/wwwsh/.conda/envs/kpforu-server/python.exe -m pytest tests/test_flow.py -q` -> `1 passed`
+- 手机端：`flutter analyze`（`client/kpforu_phone`）-> `No issues found!`
