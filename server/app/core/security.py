@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
+from uuid import UUID
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -42,11 +43,16 @@ def get_current_principal(
     if not user_id or not device_id:
         raise http_error(401, "unauthorized", "Invalid token payload")
 
+    try:
+        user_uuid = UUID(str(user_id))
+    except ValueError:
+        raise http_error(401, "unauthorized", "Invalid user id in token")
+
     device = db.query(Device).filter(Device.device_id == device_id).first()
     if device is None or str(device.user_id) != str(user_id):
         raise http_error(403, "forbidden", "Device not paired or user mismatch")
 
-    user = db.get(User, user_id)
+    user = db.get(User, user_uuid)
     if user is None:
         raise http_error(403, "forbidden", "User not found")
 

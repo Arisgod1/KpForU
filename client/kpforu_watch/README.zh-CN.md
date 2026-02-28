@@ -1,6 +1,12 @@
 # KpForU 手表端（Flutter）
 
-KpForU 手表端主要用于番茄专注计时、复习提醒与快速语音卡片创建，强调低功耗、最少交互与与手机/云端的可靠同步。
+KpForU 手表端主要用于专注计时、复习提醒确认与快速语音卡片创建，强调低功耗、最少交互和与手机/云端的可靠同步。
+
+## 快速启动
+
+1. 进入目录：`client/kpforu_watch`
+2. 安装依赖：`flutter pub get`
+3. 运行：`flutter run -d windows --dart-define=BASE_URL=http://127.0.0.1:8000/v1`
 
 ## 核心功能
 
@@ -13,9 +19,9 @@ KpForU 手表端主要用于番茄专注计时、复习提醒与快速语音卡�
 
 ## 运行与开发
 
-- 依赖：Flutter 3.x；Riverpod 状态管理；平台代码位于 android/ 与 ios/。
-- 启动：在 IDE 或命令行运行主工程，手表端入口在 `lib/src/features/home/home_page.dart`。
-- 环境：后端默认地址 `lib/src/core/env.dart` 中 `BASE_URL`（默认 `http://127.0.0.1:8000/v1`）。
+- 依赖：Flutter 3.x；Riverpod 状态管理。
+- 手表端入口：`lib/src/features/home/home_page.dart`。
+- 后端地址：`lib/src/core/env.dart` 中 `BASE_URL`（建议通过 `--dart-define` 覆盖）。
 
 ## 主要界面与交互
 
@@ -52,7 +58,7 @@ KpForU 手表端主要用于番茄专注计时、复习提醒与快速语音卡�
   - `manual_confirm_required`：是否启用手动确认
   - `saved_confirmed`：是否已确认保存
 
-实现参考：专注上传与状态在 [focus_store.dart](file:///e:/ARISONEDATA/projects/studyapp/code/client/kpforu_watch/lib/src/features/focus/focus_store.dart#L300-L331)。
+实现参考：`lib/src/features/focus/focus_store.dart`。
 
 ## 状态管理（Riverpod）
 
@@ -62,13 +68,13 @@ KpForU 手表端主要用于番茄专注计时、复习提醒与快速语音卡�
 
 ## 低功耗策略
 
-- 合并唤醒与震动；学习阶段间隔震动避免频繁唤醒；网络上传批处理并等待 Wi-Fi/BT。
+- 合并唤醒与震动；学习阶段间隔震动避免频繁唤醒；网络上传尽量批处理。
 - UI 空闲 30fps；黑色背景优先，适配 OLED 减少功耗。
 
 ## 测试与质量
 
-- 计时状态机：使用假时间源的单元测试确保阶段与循环精确；崩溃日志与面包屑在阶段切换处记录。
-- 可访问性：在真机验证震动振幅与提示对比度。
+- 计时状态机：使用假时间源的单元测试确保阶段与循环精确。
+- 可访问性：建议在真机验证震动强度与提示对比度。
 
 ## 目录结构
 

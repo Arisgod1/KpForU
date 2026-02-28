@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from io import BytesIO
 
 from app.core.security import get_current_principal
 from app.db.session import get_db
@@ -10,6 +12,7 @@ from app.services.ai_summary import (
     get_or_create_weekly_summary,
     list_summaries,
 )
+from app.services.learning_export import generate_learning_summary_pdf
 
 router = APIRouter(tags=["AI"])
 
@@ -92,3 +95,18 @@ def delete_ai_summary(
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Summary not found")
     return None
+
+
+@router.post("/ai/exports/learning-pdf")
+def export_learning_pdf(
+    db: Session = Depends(get_db),
+    principal=Depends(get_current_principal),
+):
+    user, _ = principal
+    pdf_bytes = generate_learning_summary_pdf(db, user.id)
+    file_obj = BytesIO(pdf_bytes)
+    return StreamingResponse(
+        file_obj,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=kpforu_learning_summary.pdf"},
+    )

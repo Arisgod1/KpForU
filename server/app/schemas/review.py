@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -30,7 +31,7 @@ class DueListResponse(BaseModel):
 
 
 class ReviewEventCreate(BaseModel):
-    card_id: str
+    card_id: UUID
     event_type: ReviewEventType
     occurred_at: datetime
     source: ReviewEventSource

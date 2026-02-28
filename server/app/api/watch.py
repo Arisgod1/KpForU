@@ -32,6 +32,8 @@ def review_metrics(
     next_review_at = next_upcoming_review(db, user.id)
     countdown = None
     if next_review_at:
+        if next_review_at.tzinfo is None:
+            next_review_at = next_review_at.replace(tzinfo=timezone.utc)
         delta = next_review_at - now
         countdown = max(int(delta.total_seconds()), 0)
 

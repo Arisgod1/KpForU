@@ -46,7 +46,12 @@ def _build_prompt(focus_count: int, review_done: int, review_snooze: int, days: 
 def _llm_summary(focus_count: int, review_done: int, review_snooze: int, days: int, want_audio: bool):
     settings = get_settings()
     prompt = _build_prompt(focus_count, review_done, review_snooze, days)
-    raw_text, audio_b64 = stream_chat(prompt, want_audio=want_audio)
+    try:
+        raw_text, audio_b64 = stream_chat(prompt, want_audio=want_audio)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("LLM summary failed, fallback used: %s", exc)
+        text, suggestions = _fallback_summary(focus_count, review_done, review_snooze, days)
+        return text, suggestions, None
 
     text = ""
     suggestions: list[str] = []

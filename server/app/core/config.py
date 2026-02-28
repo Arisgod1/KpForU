@@ -11,10 +11,7 @@ class Settings(BaseSettings):
         description="SQLAlchemy database URL",
     )
     jwt_secret_key: str = Field(default="dev-secret", description="JWT secret key")
-    dashscope_api_key: str | None = Field(
-        default="sk-107de5e29e0c4436b82afdf0d82c315c",  # 非生产环境默认值，生产请用环境变量覆盖
-        description="DashScope / Qwen API key",
-    )
+    dashscope_api_key: str | None = Field(default=None, description="DashScope / Qwen API key")
     jwt_algorithm: str = "HS256"
     jwt_expires_seconds: int = 7 * 24 * 3600
     leitner_intervals: dict[int, int] = Field(

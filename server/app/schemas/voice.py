@@ -15,4 +15,5 @@ class VoiceDraft(BaseModel):
     created_at: datetime
     updated_at: datetime
     text: str | None = None
+    transcript_text: str | None = None
     generated_card_id: str | None = None

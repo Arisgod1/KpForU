@@ -74,5 +74,6 @@ def get_voice_draft(
         created_at=draft.created_at,
         updated_at=draft.updated_at,
         text=draft.text,
+        transcript_text=draft.text,
         generated_card_id=str(draft.generated_card_id) if draft.generated_card_id else None,
     )

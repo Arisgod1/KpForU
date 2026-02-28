@@ -1,16 +1,26 @@
-# kpforu_watch
+# KpForU Watch Client (Flutter)
 
-A new Flutter project.
+This app is the lightweight companion of KpForU, focused on focus-timer execution, review confirmation, and quick voice capture.
 
-## Getting Started
+## Run
+1. `cd client/kpforu_watch`
+2. `flutter pub get`
+3. `flutter run -d windows --dart-define=BASE_URL=http://127.0.0.1:8000/v1`
 
-This project is a starting point for a Flutter application.
+## Main Features
+- TimeFlow focus timer with stage transitions (study/break/long break)
+- Focus session upload to backend after completion
+- Review center: due cards + done/snooze actions
+- Voice draft upload for AI-generated card drafts
+- Wallpaper customization support
 
-A few resources to get you started if this is your first Flutter project:
+## API Integration
+- Auth/Binding: `/v1/devices/watch/register`, `/v1/binding/pair`, `/v1/auth/token`
+- Focus: `/v1/focus/sessions`
+- TimeFlow templates: `/v1/timeflows/templates`
+- Reviews: `/v1/reviews/due`, `/v1/reviews/events`, `/v1/watch/review/metrics`
+- Voice drafts: `/v1/voice/drafts`, `/v1/voice/drafts/{draft_id}`
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Notes
+- For Chinese documentation, see `README.zh-CN.md`.
+- Set `BASE_URL` to your backend environment before testing.

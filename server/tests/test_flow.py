@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///./test_flow.db")
 
 from app.main import app  # noqa: E402
 from app.db.session import SessionLocal, engine, get_db  # noqa: E402
@@ -111,3 +111,9 @@ def test_happy_path_flow():
     )
     assert resp.status_code == 200
     assert resp.json()["summary_id"]
+
+    # 11. Export learning PDF
+    resp = client.post("/v1/ai/exports/learning-pdf", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/pdf")
+    assert resp.content.startswith(b"%PDF")

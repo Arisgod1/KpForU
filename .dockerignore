@@ -1,0 +1,18 @@
+# Exclude everything by default
+*
+
+# But include server directory (build context only needs server files)
+!server/
+!server/**
+
+# Ignore local envs and caches
+venv/
+.venv/
+__pycache__/
+*.pyc
+.git/
+node_modules/
+build/
+dist/
+.idea/
+*.swp
