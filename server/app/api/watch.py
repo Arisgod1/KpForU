@@ -1,12 +1,15 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy.orm import Session
 
+from app.core.errors import http_error
 from app.core.security import get_current_principal
 from app.db.session import get_db
 from app.models.review import ReviewEvent, ReviewSchedule
+from app.models.watch_setting import WatchSetting
 from app.schemas.review import TodayMetrics, WatchReviewMetrics
+from app.schemas.watch import WatchWallpaperResponse, WatchWallpaperUpdateRequest
 from app.services.reviews import count_today_done, get_due_schedules_for_date, next_upcoming_review
 from app.services.timezone import resolve_timezone, start_end_of_date
 
@@ -42,3 +45,37 @@ def review_metrics(
         next_review_at=next_review_at,
         countdown_sec=countdown,
     )
+
+
+@router.get("/watch/wallpaper", response_model=WatchWallpaperResponse)
+def get_watch_wallpaper(db: Session = Depends(get_db), principal=Depends(get_current_principal)):
+    user, _ = principal
+    settings = db.query(WatchSetting).filter(WatchSetting.user_id == user.id).first()
+    return WatchWallpaperResponse(url=settings.wallpaper_url if settings else None)
+
+
+@router.put("/watch/wallpaper", response_model=WatchWallpaperResponse)
+def update_watch_wallpaper(
+    payload: WatchWallpaperUpdateRequest,
+    db: Session = Depends(get_db),
+    principal=Depends(get_current_principal),
+):
+    user, _ = principal
+    url = payload.url.strip() if payload.url else None
+    if url:
+        if not (url.startswith("http://") or url.startswith("https://")):
+            raise http_error(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "invalid_wallpaper_url",
+                "Wallpaper URL must start with http:// or https://",
+            )
+    settings = db.query(WatchSetting).filter(WatchSetting.user_id == user.id).first()
+    if settings is None:
+        settings = WatchSetting(user_id=user.id, wallpaper_url=url)
+        db.add(settings)
+    else:
+        settings.wallpaper_url = url
+
+    db.commit()
+    db.refresh(settings)
+    return WatchWallpaperResponse(url=settings.wallpaper_url)

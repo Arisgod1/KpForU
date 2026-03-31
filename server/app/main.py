@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -9,6 +10,17 @@ from app.db.session import engine
 from app.models import Base
 
 settings = get_settings()
+
+
+def _setup_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
+    logging.getLogger("app").setLevel(logging.INFO)
+
+
+_setup_logging()
 
 app = FastAPI(title=settings.app_name, version="1.0.0")
 app.include_router(api_router, prefix="/v1")

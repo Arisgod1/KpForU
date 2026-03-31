@@ -44,6 +44,8 @@
 - `POST /v1/reviews/events`
 - `GET/POST/PUT/DELETE /v1/cards`
 - `GET /v1/watch/review/metrics`
+- `GET /v1/watch/wallpaper`
+- `PUT /v1/watch/wallpaper`
 
 ### AI 与语音
 - `POST /v1/voice/drafts`
@@ -51,6 +53,41 @@
 - `POST /v1/ai/summaries/daily`
 - `POST /v1/ai/summaries/weekly`
 - `POST /v1/ai/exports/learning-pdf`
+
+## 大模型调用与日志排查
+
+后端已增加统一日志埋点，用于区分“真实调用成功”与“fallback 回退”。
+
+- 文本/音频调用：`LLM_CALL_START` / `LLM_CALL_OK` / `LLM_CALL_ERROR`
+- AI 总结：`LLM_SUMMARY_START` / `LLM_SUMMARY_OK` / `LLM_SUMMARY_FALLBACK`
+- 导出总结：`LLM_EXPORT_SUMMARY_START` / `LLM_EXPORT_SUMMARY_OK` / `LLM_EXPORT_SUMMARY_FALLBACK`
+- 语音草稿：`VOICE_DRAFT_PROCESS_START` / `VOICE_DRAFT_LLM_OK` / `VOICE_DRAFT_LLM_FALLBACK`
+
+说明：
+- AI 总结、导出、语音在模型失败时都存在 fallback 逻辑，因此“接口 200”不等于“模型调用成功”。
+- 请结合上述日志关键词判断真实调用状态。
+
+## DashScope 兼容调用说明
+
+- 采用 OpenAI-compatible 接口，默认北京域名：`https://dashscope.aliyuncs.com/compatible-mode/v1`
+- `DASHSCOPE_API_KEY` 必须通过环境变量注入（不应硬编码到仓库）
+- Qwen-Omni 调用使用流式输出（`stream=True`）
+- 本地音频上传时使用 data URL（`data:audio/...;base64,...`）以兼容参数校验
+
+## 大模型等待边界（服务端）
+
+- 配置项位置：`app/core/config.py`
+- `qwen_timeout_seconds`：单次模型请求超时（默认 `60` 秒）
+- `qwen_max_retries`：瞬时失败重试次数（默认 `1`）
+
+说明：
+- 当模型端响应慢时，服务端会在超时后触发错误路径，并由上层总结/导出/语音流程决定 fallback。
+- 建议与客户端超时策略配合调优，避免“客户端先超时”或“服务端等待过久”。
+
+## 学习导出（PDF）
+
+- 中文字体已适配，避免中文乱码
+- 导出内容包含“学习总计”（专注总时长、平均时长、复习完成率等）
 
 ## 语音上传约束
 - 接口：`POST /v1/voice/drafts`
@@ -78,6 +115,8 @@
 - `JWT_SECRET_KEY`
 - `JWT_EXPIRES_SECONDS`
 - `DASHSCOPE_API_KEY`
+- `QWEN_TIMEOUT_SECONDS`
+- `QWEN_MAX_RETRIES`
 - `UPLOAD_MAX_MB`
 - `UPLOAD_DIR`
 

@@ -7,6 +7,7 @@ from app.models.card import Card
 from app.models.review import ReviewSchedule, ReviewEvent
 from app.models.voice import VoiceDraft
 from app.models.ai_summary import AISummary
+from app.models.watch_setting import WatchSetting
 
 __all__ = [
     "Base",
@@ -19,4 +20,5 @@ __all__ = [
     "ReviewEvent",
     "VoiceDraft",
     "AISummary",
+    "WatchSetting",
 ]

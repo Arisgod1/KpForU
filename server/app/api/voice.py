@@ -1,6 +1,8 @@
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID
+from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
@@ -27,8 +29,17 @@ async def upload_voice_draft(
     settings = get_settings()
     os.makedirs(settings.upload_dir, exist_ok=True)
 
+    original_name = file.filename or "voice"
+    audio_format = Path(original_name).suffix.lstrip(".").lower() or "bin"
+    if audio_format not in {"wav", "mp3"}:
+        raise http_error(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "unsupported_audio_format",
+            "Only wav/mp3 audio is supported.",
+        )
+
     max_bytes = settings.upload_max_mb * 1024 * 1024
-    saved_path = os.path.join(settings.upload_dir, file.filename or "voice")
+    saved_path = os.path.join(settings.upload_dir, f"{uuid4().hex}.{audio_format}")
     size = 0
     with open(saved_path, "wb") as buffer:
         while True:
@@ -41,7 +52,6 @@ async def upload_voice_draft(
             buffer.write(chunk)
     await file.close()
 
-    audio_format = (file.filename or "").split(".")[-1] or "bin"
     draft = VoiceDraft(
         user_id=user.id,
         audio_format=audio_format,

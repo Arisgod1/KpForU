@@ -16,7 +16,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/kpforu
       JWT_SECRET_KEY: dev-secret
-      DASHSCOPE_API_KEY: sk-107de5e29e0c4436b82afdf0d82c315c
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
       QWEN_MODEL: ${QWEN_MODEL:-qwen3-omni-flash}
       QWEN_AUDIO_VOICE: ${QWEN_AUDIO_VOICE:-Cherry}
       QWEN_AUDIO_FORMAT: ${QWEN_AUDIO_FORMAT:-wav}

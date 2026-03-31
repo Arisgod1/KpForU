@@ -21,10 +21,17 @@ class Settings(BaseSettings):
     upload_dir: str = "storage/voice"
     upload_max_mb: int = 20
     qwen_model: str = Field(default="qwen3-omni-flash", description="Qwen omni model name")
+    qwen_text_model: str = Field(default="qwen-plus", description="Qwen text-only model for summaries")
     qwen_base_url: str = Field(
         default="https://dashscope.aliyuncs.com/compatible-mode/v1",
         description="OpenAI-compatible endpoint for Qwen",
     )
+    qwen_timeout_seconds: int = Field(default=60, description="Timeout for each Qwen request")
+    qwen_export_timeout_seconds: int = Field(
+        default=180,
+        description="Timeout for export-time text generation requests",
+    )
+    qwen_max_retries: int = Field(default=1, description="Retry count for transient Qwen failures")
     qwen_audio_voice: str = Field(default="Cherry", description="Voice used when requesting audio output")
     qwen_audio_format: str = Field(default="wav", description="Audio format for Qwen responses")
     ai_summary_audio_enabled: bool = Field(default=False, description="Return audio for AI summaries")

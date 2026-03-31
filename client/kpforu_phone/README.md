@@ -31,8 +31,22 @@
 - AI：`/v1/ai/summaries/daily`、`/v1/ai/summaries/weekly`
 - 导出：`/v1/ai/exports/learning-pdf`
 
+## 统一等待策略（语音与导出）
+
+- 配置文件：`lib/src/core/ai_wait_policy.dart`
+- 统一参数：
+  - `requestTimeout`：语音上传请求超时（默认 60s）
+  - `pollInterval`：语音草稿状态轮询间隔（默认 2s）
+  - `pollTimeout`：语音处理总等待时长（默认 90s）
+  - `pollRequestTimeout`：单次轮询请求超时（默认 15s）
+  - `exportRequestTimeout`：学习总结 PDF 导出超时（默认 120s）
+
+说明：
+- 语音链路为“上传 + 轮询回调完成”模式，不再只按上传成功判定最终成功。
+- 若网络较慢，可先增大 `pollTimeout` 与 `exportRequestTimeout` 再联调。
+
 ## 质量状态
-- 静态检查：`flutter analyze` -> `No issues found!`（2026-02-28）
+- 静态检查：`flutter analyze` -> `No issues found!`（2026-03-27）
 
 ## 后续可扩展
 - 真机录音替代文件选择上传

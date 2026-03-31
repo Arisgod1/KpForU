@@ -9,7 +9,8 @@ from app.core.errors import http_error
 from app.core.security import get_current_principal
 from app.db.session import get_db
 from app.models.card import Card
-from app.models.review import ReviewSchedule
+from app.models.review import ReviewEvent, ReviewSchedule
+from app.models.voice import VoiceDraft
 from app.schemas.card import Card as CardSchema, CardCreate, CardUpdate
 
 router = APIRouter(tags=["Cards"])
@@ -103,3 +104,24 @@ def update_card(
         updated_at=card.updated_at,
         generated_from_draft_id=str(card.generated_from_draft_id) if card.generated_from_draft_id else None,
     )
+
+
+@router.delete("/cards/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_card(
+    card_id: UUID,
+    db: Session = Depends(get_db),
+    principal=Depends(get_current_principal),
+):
+    user, _ = principal
+    card = db.query(Card).filter(Card.id == card_id, Card.user_id == user.id).first()
+    if card is None:
+        raise http_error(status.HTTP_404_NOT_FOUND, "not_found", "Card not found")
+
+    db.query(ReviewEvent).filter(ReviewEvent.card_id == card.id, ReviewEvent.user_id == user.id).delete()
+    db.query(ReviewSchedule).filter(ReviewSchedule.card_id == card.id, ReviewSchedule.user_id == user.id).delete()
+    db.query(VoiceDraft).filter(VoiceDraft.generated_card_id == card.id, VoiceDraft.user_id == user.id).update(
+        {VoiceDraft.generated_card_id: None}
+    )
+    db.delete(card)
+    db.commit()
+    return None
