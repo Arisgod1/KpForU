@@ -199,6 +199,9 @@ coverage.xml
 *.log
 logs/
 
+# 交付打包产物
+deliverables/
+
 # 上传/存储文件（用户生成内容）
 server/storage/voice/*
 !server/storage/voice/.gitkeep  # 保留空目录
