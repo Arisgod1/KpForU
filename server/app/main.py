@@ -1,5 +1,6 @@
 import os
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -22,16 +23,17 @@ def _setup_logging() -> None:
 
 _setup_logging()
 
-app = FastAPI(title=settings.app_name, version="1.0.0")
-app.include_router(api_router, prefix="/v1")
-
-
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI):
     # Ensure upload directory exists
     os.makedirs(settings.upload_dir, exist_ok=True)
     # Auto-create tables for local/dev convenience (migrations recommended in prod)
     Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title=settings.app_name, version="1.0.0", lifespan=lifespan)
+app.include_router(api_router, prefix="/v1")
 
 
 @app.exception_handler(HTTPException)

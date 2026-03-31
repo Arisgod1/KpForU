@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -36,9 +36,7 @@ class Settings(BaseSettings):
     qwen_audio_format: str = Field(default="wav", description="Audio format for Qwen responses")
     ai_summary_audio_enabled: bool = Field(default=False, description="Return audio for AI summaries")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 class ErrorDetail(BaseModel):

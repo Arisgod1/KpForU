@@ -61,7 +61,7 @@ def weekly_summary(
 
 @router.get("/ai/summaries", response_model=list[AISummarySchema])
 def list_ai_summaries(
-    range: str | None = Query(default=None, regex="^(daily|weekly)$"),
+    range: str | None = Query(default=None, pattern="^(daily|weekly)$"),
     limit: int = Query(default=50, le=200),
     db: Session = Depends(get_db),
     principal=Depends(get_current_principal),

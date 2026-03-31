@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+def _as_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def _safe_json_loads(raw: str) -> dict[str, Any] | None:
     try:
         parsed = json.loads(raw)
@@ -64,8 +72,16 @@ def _build_export_payload(db: Session, user_id: str) -> dict[str, Any]:
 
     review_done = sum(1 for e in review_events if e.event_type == "done")
     review_snooze = sum(1 for e in review_events if e.event_type == "snooze")
-    review_done_7d = sum(1 for e in review_events if e.event_type == "done" and e.occurred_at >= last_7_start)
-    review_done_30d = sum(1 for e in review_events if e.event_type == "done" and e.occurred_at >= last_30_start)
+    review_done_7d = sum(
+        1
+        for e in review_events
+        if e.event_type == "done" and (_as_utc(e.occurred_at) or datetime.min.replace(tzinfo=timezone.utc)) >= last_7_start
+    )
+    review_done_30d = sum(
+        1
+        for e in review_events
+        if e.event_type == "done" and (_as_utc(e.occurred_at) or datetime.min.replace(tzinfo=timezone.utc)) >= last_30_start
+    )
 
     total_focus_minutes = 0
     focus_minutes_7d = 0
@@ -74,18 +90,24 @@ def _build_export_payload(db: Session, user_id: str) -> dict[str, Any]:
     daily_review_done_7d: dict[str, int] = defaultdict(int)
 
     for session in focus_sessions:
-        duration = int((session.ended_at - session.started_at).total_seconds() // 60)
+        started_at_utc = _as_utc(session.started_at)
+        ended_at_utc = _as_utc(session.ended_at)
+        if started_at_utc is None or ended_at_utc is None:
+            continue
+
+        duration = int((ended_at_utc - started_at_utc).total_seconds() // 60)
         if duration > 0:
             total_focus_minutes += duration
-            if session.ended_at >= last_7_start:
+            if ended_at_utc >= last_7_start:
                 focus_minutes_7d += duration
-                daily_focus_7d[session.ended_at.astimezone(timezone.utc).strftime("%m-%d")] += duration
-            if session.ended_at >= last_30_start:
+                daily_focus_7d[ended_at_utc.strftime("%m-%d")] += duration
+            if ended_at_utc >= last_30_start:
                 focus_minutes_30d += duration
 
     for event in review_events:
-        if event.event_type == "done" and event.occurred_at >= last_7_start:
-            daily_review_done_7d[event.occurred_at.astimezone(timezone.utc).strftime("%m-%d")] += 1
+        occurred_at_utc = _as_utc(event.occurred_at)
+        if event.event_type == "done" and occurred_at_utc and occurred_at_utc >= last_7_start:
+            daily_review_done_7d[occurred_at_utc.strftime("%m-%d")] += 1
 
     tag_counter: Counter[str] = Counter()
     for card in cards:
@@ -114,7 +136,7 @@ def _build_export_payload(db: Session, user_id: str) -> dict[str, Any]:
             }
         )
 
-    top_cards = sorted(cards, key=lambda c: c.created_at or now, reverse=True)[:8]
+    top_cards = sorted(cards, key=lambda c: _as_utc(c.created_at) or now, reverse=True)[:8]
     card_snapshots = [
         {
             "front": (card.front or "")[:60],
