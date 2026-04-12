@@ -834,7 +834,7 @@ KpForU 的 Leitner 盒子模型：
 
 1. 📝 提交Issue：GitHub Issues
 2. 💬 讨论功能：GitHub Discussions  
-3. 📧 邮件反馈：support@kpforu.dev
+3. 📧 邮件反馈：2934487705@qq.com
 
 ---
 
